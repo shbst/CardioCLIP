@@ -1,0 +1,35 @@
+run_name: "example_run"
+
+clip:
+  batch_size: 32
+  num_workers: 4
+
+xp: {}
+cardio: {}
+echo: {}
+
+params:
+  clip_model: "ViT-B/32"
+  pretrained: true
+  freeze_parameters: false
+  use_shared_net: true
+
+  lr: 0.0005
+  max_epochs: 10
+  min_epochs: 1
+  precision: 16
+  accelerator: "gpu"
+  devices: [0]
+
+  earlystopping: true
+  earlystopping_patience: 5
+
+  noise: 0.0
+  randomcropscale: 0.0
+  randomrotation: 0.0
+  randomerase: 0.0
+  image_card_switch_ratio: 0.0
+
+  # multitask labels (example)
+  targets: ["BNP"]
+

@@ -1,0 +1,16 @@
+# Core
+torch>=2.0
+torchvision>=0.15
+pytorch-lightning>=2.0
+
+# Utilities
+numpy>=1.23
+pyyaml>=6.0
+
+# Optional (recommended)
+tqdm>=4.65
+scikit-learn>=1.2
+
+# If using ViT/ResNet encoders from torchvision only, no extra deps are required.
+# Uncomment if you use custom schedulers:
+# cosine-annealing-warmup
