@@ -12,7 +12,7 @@ from pytorch_lightning.loggers import CSVLogger
 from config import CLIPConfig
 from transforms import XpCardTransforms
 from utils import get_encoders
-from clipmodel.wrapper import CustomCLIPWrapper_multitask
+from clipmodel.wrapper import CLIPWrapper
 
 
 def _import_obj(path: str):
@@ -25,7 +25,7 @@ def _import_obj(path: str):
 
 
 def parse_args():
-    p = argparse.ArgumentParser("CardioCLIP Step-1 training (wandb-free, no CSV label generators)")
+    p = argparse.ArgumentParser("CardioCLIP Step-1 training (CLIP only, no multitask loss)")
     p.add_argument("--config", type=str, default="configs/default.yaml")
 
     p.add_argument("--output_dir", type=str, required=True)
@@ -64,10 +64,15 @@ def main():
 
     # save merged run config
     with open(osp.join(out_root, "hparams.yaml"), "w", encoding="utf-8") as f:
-        yaml.safe_dump({"config": cfg, "overrides": vars(args)}, f, sort_keys=False, allow_unicode=True)
+        yaml.safe_dump(
+            {"config": cfg, "overrides": vars(args)},
+            f,
+            sort_keys=False,
+            allow_unicode=True,
+        )
 
     # encoders
-    img_encoder, card_encoder, shared_net = get_encoders(
+    image_encoder, card_encoder, shared_net = get_encoders(
         pm["clip_model"],
         pretrained=pm.get("pretrained", True),
         freeze_parameters=pm.get("freeze_parameters", False),
@@ -98,11 +103,11 @@ def main():
 
     dm = DMClass(**dm_kwargs)
 
-    # model (IMPORTANT: wrapper must read y/mask from batch; no CSV target funcs)
     config_path = "./clipmodel/configs/RN.yaml" if "RN" in pm["clip_model"] else "./clipmodel/configs/ViT.yaml"
 
-    model = CustomCLIPWrapper_multitask(
-        img_encoder=img_encoder,
+    # multitask loss を使わないので CLIPWrapper を使う
+    model = CLIPWrapper(
+        image_encoder=image_encoder,
         card_encoder=card_encoder,
         minibatch_size=clip_cfg.batch_size,
         config_path=config_path,
@@ -112,10 +117,12 @@ def main():
         tmp_save_dir=tmp_dir,
         image_card_switch_ratio=pm.get("image_card_switch_ratio", 0.0),
         shared_net=shared_net,
-        # ↓↓↓ ここが変更点：CSV由来のターゲット定義を渡さない
-        target_funcs=None,
-        thresholds=None,
-        lowerthebetters=None,
+        temperature_init=pm.get("temperature_init", 1 / 0.07),
+        use_scheduler=pm.get("use_scheduler", False),
+        scheduler_t0=pm.get("scheduler_t0", 10),
+        scheduler_tmult=pm.get("scheduler_tmult", 2),
+        scheduler_warmup=pm.get("scheduler_warmup", 2),
+        scheduler_gamma=pm.get("scheduler_gamma", 0.5),
     )
 
     callbacks = []
@@ -163,4 +170,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
